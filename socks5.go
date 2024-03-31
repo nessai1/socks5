@@ -40,7 +40,19 @@ func main() {
 		log.Fatalf("Cannot get config for start proxy: %s", err.Error())
 	}
 
-	server, _ := socks5.NewClassicServer(fmt.Sprintf("%s:%s", config.IP, config.Port), config.IP, config.Username, config.Password, 30, 30)
+	server, err := socks5.NewClassicServer(fmt.Sprintf("%s:%s", config.IP, config.Port), config.IP, config.Username, config.Password, 30, 30)
+	if err != nil {
+		log.Fatalf("Cannot create socks5 proxy: %s", err.Error())
+	}
+
+	var authType string
+	if config.Username != "" && config.Password != "" {
+		authType = "username/password"
+	} else {
+		authType = "no-auth"
+	}
+
+	log.Printf("Socks5 server starts: address=%s; authType=%s", server.Addr, authType)
 
 	middleware := HandlerMiddleware{
 		handler: &socks5.DefaultHandle{},
