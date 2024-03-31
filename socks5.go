@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 )
 
 type Config struct {
@@ -14,6 +15,9 @@ type Config struct {
 
 	Username string
 	Password string
+
+	TCPTimeout int
+	UDPTimeout int
 }
 
 type HandlerMiddleware struct {
@@ -40,7 +44,7 @@ func main() {
 		log.Fatalf("Cannot get config for start proxy: %s", err.Error())
 	}
 
-	server, err := socks5.NewClassicServer(fmt.Sprintf("%s:%s", config.IP, config.Port), config.IP, config.Username, config.Password, 30, 30)
+	server, err := socks5.NewClassicServer(fmt.Sprintf("%s:%s", config.IP, config.Port), config.IP, config.Username, config.Password, config.TCPTimeout, config.UDPTimeout)
 	if err != nil {
 		log.Fatalf("Cannot create socks5 proxy: %s", err.Error())
 	}
@@ -77,11 +81,36 @@ func fetchConfig() (Config, error) {
 	username, _ := os.LookupEnv("PROXY_USERNAME")
 	password, _ := os.LookupEnv("PROXY_PASSWORD")
 
+	var tcp, udp int
+	var err error
+	tcpTimeout, ok := os.LookupEnv("PROXY_TCP_TIMEOUT")
+	if !ok {
+		tcp = 30
+	} else {
+		tcp, err = strconv.Atoi(tcpTimeout)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid format of given TCP_TIMEOUT env: %w", err)
+		}
+	}
+
+	udpTimeout, ok := os.LookupEnv("PROXY_UDP_TIMEOUT")
+	if !ok {
+		udp = 30
+	} else {
+		udp, err = strconv.Atoi(udpTimeout)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid format of given UDP_TIMEOUT env: %w", err)
+		}
+	}
+
 	return Config{
 		IP:   ip,
 		Port: port,
 
 		Username: username,
 		Password: password,
+
+		TCPTimeout: tcp,
+		UDPTimeout: udp,
 	}, nil
 }
