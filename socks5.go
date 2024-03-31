@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/txthinking/socks5"
 	"log"
+	"net"
 	"os"
 )
 
@@ -15,6 +16,24 @@ type Config struct {
 	Password string
 }
 
+type HandlerMiddleware struct {
+	handler socks5.Handler
+}
+
+func (h *HandlerMiddleware) TCPHandle(server *socks5.Server, conn *net.TCPConn, request *socks5.Request) error {
+	dest := net.IP(request.DstAddr)
+	log.Printf("Got TCP message: address=%s; destination=%s", conn.RemoteAddr(), dest.String())
+
+	return h.handler.TCPHandle(server, conn, request)
+}
+
+func (h *HandlerMiddleware) UDPHandle(server *socks5.Server, addr *net.UDPAddr, datagram *socks5.Datagram) error {
+	dest := net.IP(datagram.DstAddr)
+	log.Printf("Got UDP message: address=%s; destination=%s", addr.IP.String(), dest.String())
+
+	return h.handler.UDPHandle(server, addr, datagram)
+}
+
 func main() {
 	config, err := fetchConfig()
 	if err != nil {
@@ -23,7 +42,10 @@ func main() {
 
 	server, _ := socks5.NewClassicServer(config.Address, config.IP, config.Username, config.Password, 30, 30)
 
-	err = server.ListenAndServe(nil)
+	middleware := HandlerMiddleware{
+		handler: &socks5.DefaultHandle{},
+	}
+	err = server.ListenAndServe(&middleware)
 	if err != nil {
 		log.Fatalf("Error while listen proxy: %s", err.Error())
 	}
