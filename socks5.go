@@ -9,8 +9,8 @@ import (
 )
 
 type Config struct {
-	Address string
-	IP      string
+	IP   string
+	Port string
 
 	Username string
 	Password string
@@ -40,7 +40,7 @@ func main() {
 		log.Fatalf("Cannot get config for start proxy: %s", err.Error())
 	}
 
-	server, _ := socks5.NewClassicServer(config.Address, config.IP, config.Username, config.Password, 30, 30)
+	server, _ := socks5.NewClassicServer(fmt.Sprintf("%s:%s", config.IP, config.Port), config.IP, config.Username, config.Password, 30, 30)
 
 	middleware := HandlerMiddleware{
 		handler: &socks5.DefaultHandle{},
@@ -52,9 +52,9 @@ func main() {
 }
 
 func fetchConfig() (Config, error) {
-	addr, ok := os.LookupEnv("PROXY_ADDRESS")
+	port, ok := os.LookupEnv("PROXY_PORT")
 	if !ok {
-		return Config{}, fmt.Errorf("PROXY_ADDRESS env required")
+		port = "1080"
 	}
 
 	ip, ok := os.LookupEnv("PROXY_IP")
@@ -66,8 +66,8 @@ func fetchConfig() (Config, error) {
 	password, _ := os.LookupEnv("PROXY_PASSWORD")
 
 	return Config{
-		Address: addr,
-		IP:      ip,
+		IP:   ip,
+		Port: port,
 
 		Username: username,
 		Password: password,
